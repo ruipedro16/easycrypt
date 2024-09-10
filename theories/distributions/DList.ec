@@ -66,6 +66,16 @@ proof.
 rewrite /= addzC dlistS 1:size_ge0 /= dmap1E -dprod1E &(mu_eq) => z /#.
 qed.
 
+lemma dlist_cat1E (d : 'a distr) l1 l2 :
+    mu1 (dlist d (size (l1 ++ l2))) (l1 ++ l2) = 
+      mu1 (dlist d (size l1)) l1 * mu1 (dlist d (size l2)) l2.
+proof.
+elim: l1 => [| x xs IH] => //=.
+  + by rewrite (dlist0 d 0) // dunit1E.
+rewrite (: 1 + size (xs ++ l2) = size (x::(xs ++ l2))) // dlistS1E IH (: 1 + size xs = size (x::xs)) // dlistS1E //.
+ring.
+qed.
+
 lemma dlist0_ll (d : 'a distr) n:
   n <= 0 =>
   is_lossless (dlist d n).
@@ -306,6 +316,17 @@ abstract theory Program.
     }
   }.
 
+  module SampleCat = {
+    proc sample (n1 n2 : int): t list = {
+      var x1, x2;
+      
+      x1 <$ dlist d n1;
+      x2 <$ dlist d n2;
+
+      return x1 ++ x2;
+    }
+  }.
+
   module Loop = {
     proc sample(n:int): t list = {
       var i, r, l;
@@ -354,6 +375,15 @@ abstract theory Program.
     move=> len_xs; rewrite dlist1E 1:/# ifF 1:/#.
     byphoare (_: n = n{1} ==> xs = res)=> //=; hoare.
     proc; auto=> />; smt(supp_dlist_size).
+  qed.
+
+  equiv Sample_SampleCat: 
+      Sample.sample ~ SampleCat.sample : 
+      0 <= n1{2} /\ 0 <= n2{2} /\ n{1} = n1{2} + n2{2}
+      ==>
+      ={res}.
+  proof.
+    admit.
   qed.
 
   equiv Sample_Loop_eq: Sample.sample ~ Loop.sample: ={n} ==> ={res}.
